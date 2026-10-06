@@ -1,0 +1,25 @@
+FROM composer:2 AS vendor
+
+WORKDIR /var/www
+
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+FROM php:8.4-fpm-alpine
+
+RUN apk add --no-cache icu-dev libzip-dev oniguruma-dev \
+    && docker-php-ext-install -j"$(nproc)" bcmath intl mbstring opcache pdo_mysql zip
+
+WORKDIR /var/www
+
+COPY --from=vendor /var/www/vendor ./vendor
+COPY . .
+
+RUN mkdir -p bootstrap/cache storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
+    && chown -R www-data:www-data bootstrap/cache storage
+
+COPY docker/production/entrypoint.sh /usr/local/bin/noelma-entrypoint
+RUN chmod +x /usr/local/bin/noelma-entrypoint
+
+ENTRYPOINT ["noelma-entrypoint"]
+CMD ["php-fpm"]
