@@ -3,7 +3,9 @@ FROM composer:2 AS vendor
 WORKDIR /var/www
 
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+# Laravel запускает artisan в composer scripts, но исходный код на этом слое
+# ещё не скопирован. Обнаружение пакетов выполняется в финальном слое ниже.
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
 FROM php:8.4-fpm-alpine
 
@@ -16,7 +18,8 @@ COPY --from=vendor /var/www/vendor ./vendor
 COPY . .
 
 RUN mkdir -p bootstrap/cache storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs \
-    && chown -R www-data:www-data bootstrap/cache storage
+    && chown -R www-data:www-data bootstrap/cache storage \
+    && php artisan package:discover --ansi
 
 COPY docker/production/entrypoint.sh /usr/local/bin/noelma-entrypoint
 RUN chmod +x /usr/local/bin/noelma-entrypoint
