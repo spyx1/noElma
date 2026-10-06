@@ -40,6 +40,11 @@ compose=(docker compose --env-file .env.production -f docker-compose.production.
 echo "Запуск базы данных…"
 "${compose[@]}" up -d --wait db
 
+echo "Ожидание готовности MySQL…"
+until "${compose[@]}" exec -T db sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N "$MYSQL_DATABASE" -e "SELECT 1"' >/dev/null 2>&1; do
+    sleep 2
+done
+
 migrations_count="$("${compose[@]}" exec -T db sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N "$MYSQL_DATABASE" -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = 0x6d6967726174696f6e73"' 2>/dev/null || true)"
 
 if [ "$migrations_count" != "1" ]; then
