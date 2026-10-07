@@ -8,7 +8,7 @@
     <x-modal class="table-record-modal" variant="editor" :expandable="true" :title="$table->name" :close-url="route('workspace.tables')">
     <div class="table-workspace">
     <dl class="table-meta"><dt>Строк</dt><dd>{{ $table->row_count }}</dd></dl>
-    <nav class="tabs"><a class="{{ $tab === 'table' ? 'active' : '' }}" href="{{ route('workspace.tables.show', $table) }}">Таблица</a><a class="{{ $tab === 'values' ? 'active' : '' }}" href="{{ route('workspace.tables.show', ['referenceTable' => $table, 'tab' => 'values']) }}">Значения</a><a class="{{ $tab === 'script' ? 'active' : '' }}" href="{{ route('workspace.tables.show', ['referenceTable' => $table, 'tab' => 'script']) }}">Скрипт</a></nav>
+    <nav class="tabs" data-table-view-tabs><a class="{{ $tab === 'table' ? 'active' : '' }}" href="{{ route('workspace.tables.show', $table) }}" data-view-tab="table">Таблица</a><a class="{{ $tab === 'values' ? 'active' : '' }}" href="{{ route('workspace.tables.show', ['referenceTable' => $table, 'tab' => 'values']) }}" data-view-tab="values">Значения</a><a class="{{ $tab === 'script' ? 'active' : '' }}" href="{{ route('workspace.tables.show', ['referenceTable' => $table, 'tab' => 'script']) }}" data-view-tab="script">Скрипт</a></nav>
     @if ($tab === 'values')
         <div class="reference-table-wrap"><table class="reference-table values-editor"><thead>
             @if ($resultColumns->isNotEmpty())
@@ -39,6 +39,36 @@
     @endif
     </div>
     <x-slot:service><x-table-service-information :table="$table" /></x-slot:service>
-    <x-slot:actions><a class="button" data-remote-modal href="{{ route('workspace.tables.edit', $table) }}">Редактировать</a><a class="button secondary" href="{{ route('workspace.tables') }}">Закрыть</a></x-slot:actions>
+    <x-slot:actions><a class="button" data-remote-modal data-table-edit-link href="{{ route('workspace.tables.edit', ['referenceTable' => $table, 'tab' => $tab === 'table' ? 'structure' : $tab]) }}">Редактировать</a><a class="button secondary" href="{{ route('workspace.tables') }}">Закрыть</a></x-slot:actions>
     </x-modal>
+    <script>
+    (() => {
+        const modal = document.querySelector('.table-record-modal');
+        if (!modal || modal.dataset.tabsReady) return;
+        modal.dataset.tabsReady = 'true';
+
+        const bindTabs = () => {
+            modal.querySelectorAll('[data-table-view-tabs] a').forEach((link) => {
+                link.addEventListener('click', async (event) => {
+                    event.preventDefault();
+                    const response = await fetch(link.href, { credentials: 'same-origin' });
+                    if (!response.ok) return;
+                    const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+                    const nextWorkspace = page.querySelector('.table-record-modal .table-workspace');
+                    if (!nextWorkspace) return;
+                    modal.querySelector('.table-workspace').replaceWith(nextWorkspace);
+                    const editLink = modal.querySelector('[data-table-edit-link]');
+                    if (editLink) {
+                        const url = new URL(editLink.href, window.location.origin);
+                        url.searchParams.set('tab', link.dataset.viewTab === 'table' ? 'structure' : link.dataset.viewTab);
+                        editLink.href = url.toString();
+                    }
+                    bindTabs();
+                });
+            });
+        };
+
+        bindTabs();
+    })();
+    </script>
 @endsection

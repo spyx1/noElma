@@ -74,9 +74,15 @@ class ReferenceTableController extends Controller
         return redirect()->route('workspace.tables.show', $table)->with('status', 'Таблица создана.');
     }
 
-    public function edit(ReferenceTable $referenceTable): View
+    public function edit(Request $request, ReferenceTable $referenceTable): View
     {
-        return view('tables.edit', ['table' => $referenceTable->load(['columns', 'creator', 'editor'])]);
+        $tab = $request->string('tab', 'structure')->value();
+        $tab = $tab === 'table' ? 'structure' : $tab;
+
+        return view('tables.edit', [
+            'table' => $referenceTable->load(['columns', 'creator', 'editor']),
+            'tab' => in_array($tab, ['structure', 'values', 'script'], true) ? $tab : 'structure',
+        ]);
     }
 
     public function update(Request $request, ReferenceTable $referenceTable): RedirectResponse

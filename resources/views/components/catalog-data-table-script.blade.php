@@ -338,6 +338,9 @@
                     if (!modal) return;
                     document.querySelectorAll('.app-modal:not([hidden])').forEach((current) => current.remove());
                     document.body.append(modal);
+                    modal.querySelectorAll('script:not([src])').forEach((script) => {
+                        try { Function(script.textContent)(); } catch (error) { console.error('Не удалось инициализировать окно.', error); }
+                    });
                     modal.querySelectorAll('.app-modal__close,.button.secondary').forEach((button) => button.onclick = (closeEvent) => { closeEvent.preventDefault(); modal.remove(); });
                     modal.querySelectorAll('[data-remote-modal]').forEach((nestedLink) => nestedLink.onclick = async (nestedEvent) => {
                         nestedEvent.preventDefault();
